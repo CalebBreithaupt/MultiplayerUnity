@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using GDD4500.LAB01;
 
 namespace GDD4500.LAB01
 {
@@ -10,6 +11,8 @@ namespace GDD4500.LAB01
         [SerializeField] private float _LifeTime = 10f;
         [SerializeField] private float _Speed = 5f;
         [SerializeField] private float _BulletRadius = 2.5f;
+        [SerializeField] private float _BulletConsumptionRatio = 1f;
+        [SerializeField] private float _BulletMaxSpeed = 100f;
         [SerializeField] private Collider _Collider;
         [SerializeField] private Rigidbody _Rigidbody;
         [SerializeField] private Material _ExplosionMaterial;
@@ -24,13 +27,43 @@ namespace GDD4500.LAB01
         public void OnCollisionEnter(Collision collision)
         {
             collision.collider.gameObject.SendMessageUpwards("OnBulletHit", this.gameObject, SendMessageOptions.DontRequireReceiver);
-            
-            _Collider.enabled = false;
-            Destroy(_Rigidbody);
 
-            GetComponent<MeshRenderer>().material = _ExplosionMaterial;
-            
-            StartCoroutine(GrowAndCheckColliders());
+            if (collision.gameObject.CompareTag("Player"))
+            {
+
+                _Collider.enabled = false;
+                Destroy(_Rigidbody);
+
+                GetComponent<MeshRenderer>().material = _ExplosionMaterial;
+
+                StartCoroutine(GrowAndCheckColliders());
+
+
+            }
+            else if (collision.gameObject.tag == "Bullet")
+            {
+                float currentVelocity = _Rigidbody.linearVelocity.magnitude;
+                float collisionVelocity = collision.gameObject.GetComponent<Rigidbody>().linearVelocity.magnitude;
+
+                if (currentVelocity >= collisionVelocity) 
+                {
+                    if (collisionVelocity < _BulletMaxSpeed)
+                    {
+                        Vector3 newVelocity = _Rigidbody.linearVelocity.normalized * (currentVelocity + collisionVelocity / _BulletConsumptionRatio);
+                        _Rigidbody.linearVelocity = newVelocity;
+                    }
+                }
+                else 
+                {
+                    _Collider.enabled = false;
+                    Destroy(_Rigidbody);
+
+                    GetComponent<MeshRenderer>().material = _ExplosionMaterial;
+
+                    StartCoroutine(GrowAndCheckColliders());
+                }
+            }
+
         }
 
     private IEnumerator GrowAndCheckColliders()
